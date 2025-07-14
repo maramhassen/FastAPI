@@ -1,8 +1,8 @@
 pipeline {
     agent {
         docker {
-            image 'node:14-alpine'
-            args '-v /tmp:/tmp'
+            image 'python:3.9'
+            label 'docker'  // optionnel, selon ton node
         }
     }
 
@@ -19,9 +19,9 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build') {
             steps {
-                sh 'docker build -t fastapi-app:latest .'
+                sh 'python --version'
             }
         }
 
