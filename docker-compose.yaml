@@ -8,10 +8,7 @@ services:
     ports:
       - "8080:8080"
       - "50000:50000"  # pour agents Jenkins
-    volumes:
-      - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock  # accès docker host
-      - /usr/bin/docker:/usr/bin/docker  # partage le binaire docker pour exécuter des commandes docker
+      
     environment:
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=false  # désactive l’assistant d’installation
     restart: unless-stopped
