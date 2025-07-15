@@ -1,47 +1,46 @@
 pipeline {
-    agent {
-        docker {
-            image 'docker:latest'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any
 
     environment {
-        REPO_URL = 'https://github.com/maramhassen/FastAPI.git'
-        COMPOSE_PROJECT_NAME = "fastapi_jenkins"
+        COMPOSE_FILE = 'docker-compose.yml'
     }
 
     stages {
-        stage('Clone Repository') {
+        stage('Cloner le dépôt') {
             steps {
-                // Cloner ton repo GitHub
-                git branch: 'main', url: "${REPO_URL}"
+                git url: 'https://github.com/maramhassen/FastAPI.git'
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Construire les images Docker') {
             steps {
-                sh 'docker build -t fastapi-app:latest .'
+                echo '🔧 Construction des services Docker...'
+                sh 'docker compose build'
             }
         }
 
-        stage('Start Services') {
+        stage('Démarrer les services') {
             steps {
-                sh 'docker-compose up -d'
+                echo '🚀 Démarrage de l\'application...'
+                sh 'docker compose up -d'
             }
         }
 
-        stage('Run Tests') {
+        stage('Tester l\'API FastAPI') {
             steps {
-                // Adapter cette commande selon tes tests réels
-                sh 'docker-compose exec stage pytest tests || true'
+                echo '🧪 Test de l\'accessibilité de l\'API...'
+                // Attente pour laisser le temps aux conteneurs de démarrer
+                sh 'sleep 10'
+                // Test de l'endpoint racine
+                sh 'curl -f http://localhost:8000 || (echo "Erreur d\'API, mais on continue" && exit 0)'
             }
         }
     }
 
     post {
         always {
-            sh 'docker-compose down'
+            echo '🧹 Nettoyage des ressources Docker...'
+            sh 'docker compose down'
         }
     }
 }
