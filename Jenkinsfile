@@ -17,9 +17,9 @@ pipeline {
             steps {
                 echo '🔧 Construction et démarrage des services Docker...'
                 // Build des images
-                sh 'docker-compose -f docker-compose.yml build'
-                // Démarrage des services en arrière-plan
-                sh 'docker-compose -f docker-compose.yml up -d'
+                sh 'docker compose -f docker-compose.yml build'
+                sh 'docker compose -f docker-compose.yml up -d'
+
             }
         }
 
