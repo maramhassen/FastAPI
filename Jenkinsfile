@@ -8,7 +8,8 @@ pipeline {
     stages {
         stage('Cloner le dépôt') {
             steps {
-                git url: 'https://github.com/maramhassen/FastAPI.git'
+                git branch: 'main', url: 'https://github.com/maramhassen/FastAPI.git'
+
             }
         }
 
