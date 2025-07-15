@@ -21,13 +21,6 @@ pipeline {
             }
         }
 
-        stage('Démarrer les services') {
-            steps {
-                echo '🚀 Démarrage de l\'application...'
-                sh 'docker compose up -d'
-            }
-        }
-
         stage('Tester l\'API FastAPI') {
             steps {
                 echo '🧪 Test de l\'accessibilité de l\'API...'
