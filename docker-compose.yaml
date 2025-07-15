@@ -4,14 +4,20 @@ services:
   jenkins:
     image: jenkins/jenkins:latest
     container_name: jenkins
-    user: root  # nécessaire pour installer docker CLI ou faire des manipulations
+    user: root
     ports:
       - "8080:8080"
-      - "50000:50000"  # pour agents Jenkins
-      
+      - "50000:50000"
     environment:
-      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false  # désactive l’assistant d’installation
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock  # accès démon docker
+      - /usr/bin/docker:/usr/bin/docker            # accès docker CLI (sur Linux)
     restart: unless-stopped
+    networks:
+      - fastapi_network
+
   postgres:
     image: postgres:15-alpine
     container_name: database-app
