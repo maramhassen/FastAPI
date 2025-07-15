@@ -17,7 +17,7 @@ pipeline {
         stage('Construire les images Docker') {
             steps {
                 echo '🔧 Construction des services Docker...'
-                sh 'docker compose build'
+                sh 'docker-compose -f docker-compose.yaml build'
             }
         }
 
