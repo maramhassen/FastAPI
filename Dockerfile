@@ -1,36 +1,19 @@
-FROM python:3.11-slim
+FROM jenkins/jenkins:latest
 
-# Set work directory
-WORKDIR /app
+USER root
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Install system dependencies
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        postgresql-client \
-        gcc \
-        python3-dev \
-        libpq-dev \
+# Installer Docker CLI (version Debian slim)
+RUN apt-get update && apt-get install -y \
+    docker.io \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+# Installer docker-compose (dernière version stable)
+RUN curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+    -o /usr/local/bin/docker-compose \
+    && chmod +x /usr/local/bin/docker-compose
 
-# Copy project
-COPY . .
+# Vérifier les versions (optionnel)
+RUN docker --version && docker-compose --version
 
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app
-USER app
-
-# Expose port
-EXPOSE 8000
-
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+USER jenkins

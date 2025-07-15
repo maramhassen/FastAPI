@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   jenkins:
-    image: jenkins/jenkins:latest
+    image: jenkins-with-compose
     container_name: jenkins
     user: root
     ports:
@@ -12,11 +12,12 @@ services:
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
     volumes:
       - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock  # accès démon docker
-      - /usr/bin/docker:/usr/bin/docker            # accès docker CLI (sur Linux)
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
     restart: unless-stopped
     networks:
       - fastapi_network
+
 
   postgres:
     image: postgres:15-alpine
