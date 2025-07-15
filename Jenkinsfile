@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     environment {
+        PATH = "/usr/bin:${env.PATH}"
         COMPOSE_FILE = 'docker-compose.yml'
     }
 
