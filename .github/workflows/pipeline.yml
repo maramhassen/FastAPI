@@ -1,0 +1,70 @@
+name: FastAPI CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DOCKER_COMPOSE_VERSION: "v2.24.5"
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: userpostgres
+          POSTGRES_PASSWORD: passwordpostgres
+          POSTGRES_DB: dbpostgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    # Étape 1: Checkout du code
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Étape 2: Setup Python
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    # Étape 3: Installer les dépendances
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+
+    # Étape 4: Exécuter les tests
+    - name: Run tests
+      env:
+        DATABASE_URL: postgresql://userpostgres:passwordpostgres@localhost:5432/dbpostgres
+      run: |
+        python -m pytest --cov=app --cov-report=xml
+
+    # Étape 5: Installer Docker Compose
+    - name: Install Docker Compose
+      run: |
+        sudo curl -L "https://github.com/docker/compose/releases/download/${{ env.DOCKER_COMPOSE_VERSION }}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+
+    # Étape 6: Build et déploiement (seulement sur main)
+    - name: Build and deploy
+      if: github.ref == 'refs/heads/main'
+      run: |
+        docker-compose --version
+        docker-compose up --build -d
+        sleep 10  # Attendre le démarrage des services
+        docker-compose ps
+        docker-compose logs
