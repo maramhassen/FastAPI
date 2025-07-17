@@ -7,7 +7,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro 
     depends_on:
       - stage
     networks:
@@ -110,6 +110,7 @@ volumes:
   elasticsearch_data:
   jenkins_home:
   grafana_data:
+  prometheus_data:
 
 
 networks:
