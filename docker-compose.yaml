@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+    depends_on:
+      - stage
+    networks:
+      - fastapi_network
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - fastapi_network
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    networks:
+      - fastapi_network
+
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: database-app
+    environment:
+      POSTGRES_USER: userpostgres
+      POSTGRES_PASSWORD: passwordpostgres
+      POSTGRES_DB: dbpostgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - fastapi_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - fastapi_network
+
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - fastapi_network
+    
+
+  # FastAPI Application
+  stage:
+    build: .
+    container_name: stage 
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://userpostgres:passwordpostgres@postgres:5432/dbpostgres
+      - REDIS_URL=redis://redis:6379
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - DOCKER=true  
+    depends_on:
+      - postgres
+      - redis
+      - elasticsearch
+    volumes:
+      - .:/app
+    networks:
+      - fastapi_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:
+  redis_data:
+  elasticsearch_data:
+  jenkins_home:
+  grafana_data:
+  prometheus_data:
+
+
+networks:
+  fastapi_network:
+    driver: bridge
