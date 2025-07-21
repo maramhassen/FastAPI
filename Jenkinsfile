@@ -15,9 +15,9 @@ pipeline {
         stage('Construire et démarrer') {
             steps {
                 dir("${WORKSPACE}/${PROJECT_DIR}") {
-                    sh 'docker compose version'
-                    sh 'docker compose build'
-                    sh 'docker compose up -d'
+                    sh 'docker-compose version'
+                    sh 'docker-compose build'
+                    sh 'docker-compose up -d'
                 }
             }
         }
@@ -35,7 +35,7 @@ pipeline {
     post {
         always {
             dir("${WORKSPACE}/${PROJECT_DIR}") {
-                sh 'docker compose down'
+                sh 'docker-compose down'
             }
         }
     }
