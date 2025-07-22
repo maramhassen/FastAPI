@@ -82,15 +82,6 @@ services:
     networks:
       - fastapi_network
 
-  sonarqube:
-    image: sonarqube:community
-    container_name: sonarqube
-    ports:
-      - "9000:9000"
-    volumes:
-      - sonarqube_data:/opt/sonarqube/data
-    networks:
-      - fastapi_network
 
   # FastAPI Application
   stage:
@@ -120,7 +111,6 @@ volumes:
   jenkins_home:
   grafana_data:
   prometheus_data:
-  sonarqube_data:
 
 
 networks:
