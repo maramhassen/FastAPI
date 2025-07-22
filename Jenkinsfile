@@ -7,7 +7,7 @@ pipeline {
         NEXUS_URL = '192.168.136.164:8082'
         NEXUS_REPO = 'docker-hosted'
         NEXUS_USER = 'admin'
-        NEXUS_PASSWORD = '22f595b4-d409-4ed3-b244-4c39fe04b71b'
+        NEXUS_PASSWORD = '0d8fa22d-2743-495d-9ba4-915e0293e326'
     }
 
     stages {
