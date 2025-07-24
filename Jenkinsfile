@@ -22,11 +22,23 @@ pipeline {
             }
         }
 
+        stage('SCM Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Tests unitaires avec pytest') {
             steps {
                 dir("${WORKSPACE}/${PROJECT_DIR}") {
-                    // ⚠️ Exécute les tests dans le conteneur nommé "stage"
-                    sh 'docker exec stage pytest --junitxml=report.xml || exit 1'
+                    // Création du répertoire local pour les rapports
+                    sh 'mkdir -p test-reports'
+
+                    // Exécution des tests dans le conteneur, sortie dans un répertoire avec droits
+                    sh 'docker exec stage pytest --junitxml=/tmp/report.xml || exit 1'
+
+                    // Copie le rapport du conteneur vers l'hôte
+                    sh 'docker cp stage:/tmp/report.xml test-reports/report.xml'
                 }
             }
         }
@@ -34,14 +46,13 @@ pipeline {
         stage('Vérifier si l\'API répond') {
             steps {
                 dir("${WORKSPACE}/${PROJECT_DIR}") {
-                    // 🔁 Teste 10 fois avec pause jusqu'à succès
                     sh '''
                     for i in {1..10}; do
                       if curl -f http://localhost:8000; then
                         echo "API opérationnelle !"
                         break
                       fi
-                      echo "En attente de l'API..."
+                      echo "En attente de l\'API..."
                       sleep 3
                     done
                     '''
@@ -53,14 +64,11 @@ pipeline {
     post {
         always {
             dir("${WORKSPACE}/${PROJECT_DIR}") {
-                // 📄 Publie les résultats pytest si disponibles
                 script {
-                    if (fileExists('report.xml')) {
-                        junit 'report.xml'
+                    if (fileExists('test-reports/report.xml')) {
+                        junit 'test-reports/report.xml'
                     }
                 }
-
-                // 🧹 Arrête et supprime les conteneurs
                 sh 'docker-compose down'
             }
         }
