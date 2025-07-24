@@ -50,6 +50,15 @@ pipeline {
             }
         }
 
+        stage('Upload artefact vers Nexus') {
+            steps {
+                dir("${WORKSPACE}/${PROJECT_DIR}") {
+                    sh 'python setup.py sdist'
+                    sh 'curl -u admin:admin123 --upload-file dist/*.tar.gz http://localhost:8081/repository/raw-hosted/'
+                }
+            }
+        }
+
         stage('Vérifier si l\'API répond') {
             steps {
                 dir("${WORKSPACE}/${PROJECT_DIR}") {
