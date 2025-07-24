@@ -51,6 +51,16 @@ services:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_logs:/opt/sonarqube/logs
       - sonarqube_extensions:/opt/sonarqube/extensions
+    nexus:
+      image: sonatype/nexus3
+      container_name: nexus
+      ports:
+        - "8081:8081"
+      volumes:
+        - nexus_data:/nexus-data
+      networks:
+        - fastapi_network
+
 
   postgres:
     image: postgres:15-alpine
@@ -124,6 +134,8 @@ volumes:
   sonarqube_data:
   sonarqube_logs:
   sonarqube_extensions:
+  nexus_data:
+
 
 
 networks:
