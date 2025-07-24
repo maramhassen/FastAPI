@@ -42,6 +42,13 @@ pipeline {
                 }
             }
         }
+        stage('Analyse SonarQube') {
+            steps {
+                dir("${WORKSPACE}") {
+                    sh 'sonar-scanner'
+                }
+            }
+        }
 
         stage('Vérifier si l\'API répond') {
             steps {
