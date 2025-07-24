@@ -2,12 +2,7 @@ pipeline {
     agent any
 
     environment {
-        PROJECT_DIR = 'FastAPI' 
-        IMAGE_NAME = 'fastapi_app'
-        NEXUS_URL = '192.168.136.164:8082'
-        NEXUS_REPO = 'docker-hosted'
-        NEXUS_USER = 'admin'
-        NEXUS_PASSWORD = '0d8fa22d-2743-495d-9ba4-915e0293e326'
+        PROJECT_DIR = 'FastAPI'  
     }
 
     stages {
@@ -30,6 +25,7 @@ pipeline {
         stage('Tests unitaires avec pytest') {
             steps {
                 dir("${WORKSPACE}/${PROJECT_DIR}") {
+                    // ⚠️ Exécute les tests dans le conteneur nommé "stage"
                     sh 'docker exec stage pytest --junitxml=report.xml || exit 1'
                 }
             }
@@ -38,6 +34,7 @@ pipeline {
         stage('Vérifier si l\'API répond') {
             steps {
                 dir("${WORKSPACE}/${PROJECT_DIR}") {
+                    // 🔁 Teste 10 fois avec pause jusqu'à succès
                     sh '''
                     for i in {1..10}; do
                       if curl -f http://localhost:8000; then
@@ -51,33 +48,19 @@ pipeline {
                 }
             }
         }
-
-        stage('Release - Nexus') {
-            steps {
-                dir("${WORKSPACE}/${PROJECT_DIR}") {
-                    sh '''
-                        echo "📦 Tag de l'image Docker vers Nexus"
-                        docker tag fastapi_app ${NEXUS_URL}/${NEXUS_REPO}/fastapi_app
-
-                        echo "🔐 Connexion à Nexus via HTTP"
-                        docker login ${NEXUS_URL} -u ${NEXUS_USER} -p ${NEXUS_PASSWORD}
-
-                        echo "🚀 Poussée de l'image vers Nexus"
-                        docker push ${NEXUS_URL}/${NEXUS_REPO}/fastapi_app
-                    '''
-                }
-            }
-        }
     }
 
     post {
         always {
             dir("${WORKSPACE}/${PROJECT_DIR}") {
+                // 📄 Publie les résultats pytest si disponibles
                 script {
                     if (fileExists('report.xml')) {
                         junit 'report.xml'
                     }
                 }
+
+                // 🧹 Arrête et supprime les conteneurs
                 sh 'docker-compose down'
             }
         }
