@@ -48,10 +48,15 @@ pipeline {
         stage('Analyse SonarQube') {
             steps {
                 script {
-            // Aller dans le bon dossier si besoin
                     dir("$WORKSPACE") {
-                // Supprimer manuellement l'ancien conteneur nommé "sonarqube"
-                        sh 'docker rm -f sonarqube 2>/dev/null || true'
+                // Vérifie si le conteneur sonarqube existe et le supprime
+                        sh '''
+                        if [ "$(docker ps -aq -f name=^/sonarqube$)" ]; then
+                        echo "➡️  Suppression du conteneur existant sonarqube..."
+                        docker stop sonarqube || true
+                        docker rm sonarqube || true
+                        fi
+                        '''
 
                 // Nettoyer les orphelins
                         sh 'docker-compose -f docker-compose.sonar.yml down --remove-orphans'
@@ -59,7 +64,7 @@ pipeline {
                 // Démarrer SonarQube
                         sh 'docker-compose -f docker-compose.sonar.yml up -d'
 
-                // Attendre que SonarQube soit prêt
+                // Attendre que SonarQube soit UP
                         timeout(time: 60, unit: 'SECONDS') {
                             waitUntil {
                                 def status = sh(script: "curl -s http://localhost:9000/api/system/health | grep -q '\"status\":\"UP\"'", returnStatus: true)
@@ -67,19 +72,15 @@ pipeline {
                             }
                         }
 
-                // Lancer l’analyse SonarScanner
+                // Lancer l’analyse
                         sh 'sonar-scanner'
 
-                // Arrêter SonarQube après analyse
-                        sh 'docker-compose -f docker-compose.sonar.yml down'
+                // Arrêter et supprimer le conteneur proprement
+                        sh 'docker-compose -f docker-compose.sonar.yml down --remove-orphans'
                     }
                 }
-            }   
+            }
         }
-    }
-}
-
-
 
 
         stage('Upload artefact vers Nexus') {
