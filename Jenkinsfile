@@ -43,6 +43,31 @@ pipeline {
                 }
             }
         }
+        stage('Wait for SonarQube') {
+            steps {
+                script {
+                    def sonarUp = false
+                    for (int i = 0; i < 30; i++) { // 30 essais max, 5 sec d'intervalle → max 2min30 d'attente
+                        try {
+                            def response = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:9000/api/system/health", returnStdout: true).trim()
+                            if (response == '200') {
+                                sonarUp = true
+                                echo "SonarQube is up and healthy!"
+                                break
+                            } else {
+                        } catch (Exception e) {
+                    // on ignore les erreurs pendant l'attente
+                        }
+                        echo "Waiting for SonarQube to be ready..."
+                        sleep 5
+                    }
+                    if (!sonarUp) {
+                        error "SonarQube did not become healthy in time, aborting pipeline"
+                    }
+                }
+            }
+        }
+
 
         stage('Analyse SonarQube') {
             steps {
