@@ -77,33 +77,35 @@ pipeline {
         }
     }
 
-    post {
-        always {
-            dir("${WORKSPACE}/${PROJECT_DIR}") {
-                script {
-                    if (fileExists('test-reports/report.xml')) {
-                        junit 'test-reports/report.xml'
+        post {
+            always {
+            // Rapport de test JUnit
+                dir("${WORKSPACE}/${PROJECT_DIR}") {
+                    script {
+                        if (fileExists('test-reports/report.xml')) {
+                            junit 'test-reports/report.xml'
+                        }
+                    }
+                    // Arrêt des services Docker
+                        sh 'docker-compose down'
                     }
                 }
-                sh 'docker-compose down'
+
+            // Notification par e-mail
+                emailext (
+                    subject: "Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                    body: """\
+Bonjour,
+
+Le pipeline '${env.JOB_NAME}' s'est terminé avec le statut : ${currentBuild.currentResult}
+Lien vers les logs : ${env.BUILD_URL}
+
+Cordialement,
+Jenkins CI/CD
+""",
+                    to: 'maramhassen22@gmail.com'
+                )
             }
-        }
-    }
-    post {
-        always {
-            emailext (
-                subject: "Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: """\
-                    Bonjour,
+        
 
-                    Le pipeline '${env.JOB_NAME}' s'est terminé avec le statut : ${currentBuild.currentResult}
-                    Lien vers les logs : ${env.BUILD_URL}
-
-                    Cordialement,
-                    Jenkins CI/CD
-                """,
-                to: 'maramhassen22@gmail.com'
-            )
-        }
-    }
 }
