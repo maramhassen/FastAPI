@@ -42,6 +42,7 @@ pipeline {
                 }
             }
         }
+
         stage('Analyse SonarQube') {
             steps {
                 dir("${WORKSPACE}") {
@@ -77,21 +78,20 @@ pipeline {
         }
     }
 
-        post {
-            always {
-            // Rapport de test JUnit
-                dir("${WORKSPACE}/${PROJECT_DIR}") {
-                    script {
-                        if (fileExists('test-reports/report.xml')) {
-                            junit 'test-reports/report.xml'
-                        }
-                    }
-                    // Arrêt des services Docker
-                        sh 'docker-compose down'
+    post {
+        always {
+            // Rapport de test JUnit et arrêt des services
+            dir("${WORKSPACE}/${PROJECT_DIR}") {
+                script {
+                    if (fileExists('test-reports/report.xml')) {
+                        junit 'test-reports/report.xml'
                     }
                 }
+                sh 'docker-compose down'
+            }
 
             // Notification par e-mail
+            script {
                 emailext (
                     subject: "Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                     body: """\
@@ -106,6 +106,6 @@ Jenkins CI/CD
                     to: 'maramhassen22@gmail.com'
                 )
             }
-        
-
+        }
+    }
 }
