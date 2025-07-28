@@ -89,4 +89,21 @@ pipeline {
             }
         }
     }
+    post {
+        always {
+            emailext (
+                subject: "Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: """\
+                    Bonjour,
+
+                    Le pipeline '${env.JOB_NAME}' s'est terminé avec le statut : ${currentBuild.currentResult}
+                    Lien vers les logs : ${env.BUILD_URL}
+
+                    Cordialement,
+                    Jenkins CI/CD
+                """,
+                to: 'maramhassen22@gmail.com'
+            )
+        }
+    }
 }
