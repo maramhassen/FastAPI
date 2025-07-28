@@ -48,31 +48,36 @@ pipeline {
         stage('Analyse SonarQube') {
             steps {
                 script {
-                    // Démarre SonarQube séparément
+            // Arrêter et supprimer le conteneur SonarQube s'il existe déjà
+                    sh 'docker-compose -f docker-compose.sonar.yml down --remove-orphans || true'
+            
+            // Démarrer SonarQube
                     sh 'docker-compose -f docker-compose.sonar.yml up -d'
 
-                    // Attend que SonarQube soit prêt (max 60s)
+            // Attendre que SonarQube soit prêt (max 60s)
                     def maxTries = 20
                     for (int i = 0; i < maxTries; i++) {
                         def result = sh(script: "curl -s http://localhost:9000/api/system/health | grep -o '\"status\":\"UP\"'", returnStatus: true)
                         if (result == 0) {
                             echo 'SonarQube est prêt.'
                             break
+                        } else {
+                            echo 'En attente de SonarQube...'
+                            sleep 3
                         }
-                        echo 'En attente de SonarQube...'
-                        sleep 3
                     }
 
-                    // Exécute l'analyse
+            // Exécuter l'analyse
                     dir("${WORKSPACE}") {
                         sh 'sonar-scanner'
                     }
 
-                    // Éteint SonarQube
+            // Éteindre SonarQube
                     sh 'docker-compose -f docker-compose.sonar.yml down'
                 }
             }
         }
+
 
 
         stage('Upload artefact vers Nexus') {
