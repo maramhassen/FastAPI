@@ -43,39 +43,37 @@ pipeline {
                 }
             }
         }
-        stage('Wait for SonarQube') {
-            steps {
-                script {
-                    def sonarUp = false
-                    for (int i = 0; i < 30; i++) { // 30 essais max, 5 sec d'intervalle → max 2min30 d'attente
-                        try {
-                            def response = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:9000/api/system/health", returnStdout: true).trim()
-                            if (response == '200') {
-                                sonarUp = true
-                                echo "SonarQube is up and healthy!"
-                                break
-                            } else {
-                        } catch (Exception e) {
-                    // on ignore les erreurs pendant l'attente
-                        }
-                        echo "Waiting for SonarQube to be ready..."
-                        sleep 5
-                    }
-                    if (!sonarUp) {
-                        error "SonarQube did not become healthy in time, aborting pipeline"
-                    }
-                }
-            }
-        }
 
 
         stage('Analyse SonarQube') {
             steps {
-                dir("${WORKSPACE}") {
-                    sh 'sonar-scanner'
+                script {
+                    // Démarre SonarQube séparément
+                    sh 'docker-compose -f docker-compose.sonar.yml up -d'
+
+                    // Attend que SonarQube soit prêt (max 60s)
+                    def maxTries = 20
+                    for (int i = 0; i < maxTries; i++) {
+                        def result = sh(script: "curl -s http://localhost:9000/api/system/health | grep -o '\"status\":\"UP\"'", returnStatus: true)
+                        if (result == 0) {
+                            echo 'SonarQube est prêt.'
+                            break
+                        }
+                        echo 'En attente de SonarQube...'
+                        sleep 3
+                    }
+
+                    // Exécute l'analyse
+                    dir("${WORKSPACE}") {
+                        sh 'sonar-scanner'
+                    }
+
+                    // Éteint SonarQube
+                    sh 'docker-compose -f docker-compose.sonar.yml down'
                 }
             }
         }
+
 
         stage('Upload artefact vers Nexus') {
             steps {
