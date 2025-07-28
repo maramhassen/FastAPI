@@ -48,35 +48,37 @@ pipeline {
         stage('Analyse SonarQube') {
             steps {
                 script {
-            // Arrêter et supprimer le conteneur SonarQube s'il existe déjà
-                    sh 'docker-compose -f docker-compose.sonar.yml down --remove-orphans || true'
-            
-            // Démarrer SonarQube
-                    sh 'docker-compose -f docker-compose.sonar.yml up -d'
+            // Aller dans le bon dossier si besoin
+                    dir("$WORKSPACE") {
+                // Supprimer manuellement l'ancien conteneur nommé "sonarqube"
+                        sh 'docker rm -f sonarqube 2>/dev/null || true'
 
-            // Attendre que SonarQube soit prêt (max 60s)
-                    def maxTries = 20
-                    for (int i = 0; i < maxTries; i++) {
-                        def result = sh(script: "curl -s http://localhost:9000/api/system/health | grep -o '\"status\":\"UP\"'", returnStatus: true)
-                        if (result == 0) {
-                            echo 'SonarQube est prêt.'
-                            break
-                        } else {
-                            echo 'En attente de SonarQube...'
-                            sleep 3
+                // Nettoyer les orphelins
+                        sh 'docker-compose -f docker-compose.sonar.yml down --remove-orphans'
+
+                // Démarrer SonarQube
+                        sh 'docker-compose -f docker-compose.sonar.yml up -d'
+
+                // Attendre que SonarQube soit prêt
+                        timeout(time: 60, unit: 'SECONDS') {
+                            waitUntil {
+                                def status = sh(script: "curl -s http://localhost:9000/api/system/health | grep -q '\"status\":\"UP\"'", returnStatus: true)
+                                return (status == 0)
+                            }
                         }
-                    }
 
-            // Exécuter l'analyse
-                    dir("${WORKSPACE}") {
+                // Lancer l’analyse SonarScanner
                         sh 'sonar-scanner'
-                    }
 
-            // Éteindre SonarQube
-                    sh 'docker-compose -f docker-compose.sonar.yml down'
+                // Arrêter SonarQube après analyse
+                        sh 'docker-compose -f docker-compose.sonar.yml down'
+                    }
                 }
-            }
+            }   
         }
+    }
+}
+
 
 
 
