@@ -17,6 +17,7 @@ pipeline {
                 dir("${WORKSPACE}/${PROJECT_DIR}") {
                     sh 'docker-compose version'
                     sh 'docker-compose build'
+                    sh 'docker-compose down --remove-orphans'
                     sh 'docker-compose up -d'
                 }
             }
