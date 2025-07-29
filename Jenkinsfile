@@ -37,19 +37,19 @@ pipeline {
         stage('Analyse SonarQube') {
             steps {
                 dir("${WORKSPACE}") {
-            // Nettoyage préalable
+                    // Nettoyage préalable
                     sh '''
                     docker-compose -f docker-compose.sonar.yml down --remove-orphans || true
                     docker rm -f sonarqube || true
                     '''
 
-            // Démarrer SonarQube avec plus de ressources
+                    // Démarrer SonarQube avec plus de ressources
                     sh '''
                     docker-compose -f docker-compose.sonar.yml up -d
                     docker update --memory 2G --memory-swap 3G sonarqube
                     '''
 
-            // Attente que SonarQube soit vraiment prêt
+                    // Attente que SonarQube soit vraiment prêt
                     timeout(time: 300, unit: 'SECONDS') {
                         script {
                             waitUntil {
@@ -71,7 +71,7 @@ pipeline {
                         }
                     }
 
-            // Exécuter l’analyse SonarQube avec authentification par token
+                    // Exécuter l’analyse SonarQube avec authentification par token
                     withSonarQubeEnv('sonarqube') {
                         withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
                             dir("${WORKSPACE}/${PROJECT_DIR}") {
@@ -86,9 +86,10 @@ pipeline {
                                 '''
                             }
                         }
-                    }   
-                }
+                    }
+                }  
             }
+        }
 
         stage('Upload artefact vers Nexus') {
             steps {
