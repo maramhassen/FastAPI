@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         PROJECT_DIR = 'FastAPI'
+        SONAR_HOST_URL = 'http://sonarqube:9000'
     }
 
     stages {
@@ -36,34 +37,50 @@ pipeline {
         stage('Analyse SonarQube') {
             steps {
                 dir("${WORKSPACE}") {
-                    // Supprimer SonarQube s’il existe
+                    // Nettoyage préalable
                     sh '''
-                    if [ "$(docker ps -aq -f name=^/sonarqube$)" ]; then
-                        echo "➡️  Suppression du conteneur existant sonarqube..."
-                        docker stop sonarqube || true
-                        docker rm sonarqube || true
-                    fi
+                    docker-compose -f docker-compose.sonar.yml down --remove-orphans || true
+                    docker rm -f sonarqube || true
                     '''
-                    sh 'docker-compose -f docker-compose.sonar.yml down --remove-orphans'
-                    sh 'docker-compose -f docker-compose.sonar.yml up -d'
-
-                    // Attente que SonarQube soit UP
+                    
+                    // Démarrer SonarQube avec plus de ressources
+                    sh '''
+                    docker-compose -f docker-compose.sonar.yml up -d
+                    docker update --memory 2G --memory-swap 3G sonarqube
+                    '''
+                    
+                    // Attente que SonarQube soit vraiment prêt
                     timeout(time: 300, unit: 'SECONDS') {
                         waitUntil {
-                            def status = sh(script: """
-                                curl -s http://sonarqube:9000/api/system/health | \
-                                grep -q '"status":"GREEN"' || \
-                                curl -s http://sonarqube:9000/api/system/status | \
-                                grep -q '"status":"UP"'
+                            def ready = sh(
+                                script: """
+                                STATUS=$(curl -s ${SONAR_HOST_URL}/api/system/status || echo "{}")
+                                HEALTH=$(curl -s ${SONAR_HOST_URL}/api/system/health || echo "{}")
+                                echo "Status: $STATUS"
+                                echo "Health: $HEALTH"
+                                grep -q '"status":"UP"' <<< "$STATUS" || \
+                                grep -q '"status":"GREEN"' <<< "$HEALTH"
                                 """,
                                 returnStatus: true
                             )
-                            return (status == 0)
+                            sleep 10  // Pause entre les vérifications
+                            return (ready == 0)
                         }
                     }
-
-                    sh 'sonar-scanner -Dsonar.host.url=http://sonarqube:9000'
-                    sh 'docker-compose -f docker-compose.sonar.yml down --remove-orphans'
+                    
+                    // Exécuter l'analyse SonarQube
+                    withSonarQubeEnv('sonarqube') {  // Configuration du serveur dans Jenkins
+                        dir("${WORKSPACE}/${PROJECT_DIR}") {
+                            sh '''
+                            sonar-scanner \
+                                -Dsonar.projectKey=fastapi_app \
+                                -Dsonar.projectName="FastAPI Application" \
+                                -Dsonar.sources=app \
+                                -Dsonar.python.version=3.11 \
+                                -Dsonar.junit.reportPaths=test-reports/report.xml
+                            '''
+                        }
+                    }
                 }
             }
         }
