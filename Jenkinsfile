@@ -48,14 +48,21 @@ pipeline {
                     sh 'docker-compose -f docker-compose.sonar.yml up -d'
 
                     // Attente que SonarQube soit UP
-                    timeout(time: 60, unit: 'SECONDS') {
+                    timeout(time: 300, unit: 'SECONDS') {
                         waitUntil {
-                            def status = sh(script: "curl -s http://localhost:9000/api/system/health | grep -q '\"status\":\"UP\"'", returnStatus: true)
+                            def status = sh(script: """
+                                curl -s http://sonarqube:9000/api/system/health | \
+                                grep -q '"status":"GREEN"' || \
+                                curl -s http://sonarqube:9000/api/system/status | \
+                                grep -q '"status":"UP"'
+                                """,
+                                returnStatus: true
+                            )
                             return (status == 0)
                         }
                     }
 
-                    sh 'sonar-scanner'
+                    sh 'sonar-scanner -Dsonar.host.url=http://sonarqube:9000'
                     sh 'docker-compose -f docker-compose.sonar.yml down --remove-orphans'
                 }
             }
