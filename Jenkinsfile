@@ -53,20 +53,22 @@ pipeline {
                     timeout(time: 300, unit: 'SECONDS') {
                         waitUntil {
                             def ready = sh(
-                                script: """
-                                STATUS=$(curl -s ${SONAR_HOST_URL}/api/system/status || echo "{}")
-                                HEALTH=$(curl -s ${SONAR_HOST_URL}/api/system/health || echo "{}")
+                                script: '''
+                                SONAR_HOST_URL="http://192.168.136.165:9000"
+                                STATUS=$(curl -s $SONAR_HOST_URL/api/system/status || echo "{}")
+                                HEALTH=$(curl -s $SONAR_HOST_URL/api/system/health || echo "{}")
                                 echo "Status: $STATUS"
                                 echo "Health: $HEALTH"
-                                grep -q '"status":"UP"' <<< "$STATUS" || \
-                                grep -q '"status":"GREEN"' <<< "$HEALTH"
-                                """,
+                                echo "$STATUS" | grep -q '"status":"UP"' || \
+                                echo "$HEALTH" | grep -q '"status":"GREEN"'
+                                ''',
                                 returnStatus: true
                             )
-                            sleep 10  // Pause entre les vérifications
+                            sleep 10
                             return (ready == 0)
                         }
                     }
+
                     
                     // Exécuter l'analyse SonarQube
                     withSonarQubeEnv('sonarqube') {  // Configuration du serveur dans Jenkins
