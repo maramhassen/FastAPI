@@ -37,56 +37,44 @@ pipeline {
         stage('Analyse SonarQube') {
             steps {
                 dir("${WORKSPACE}") {
-                    // Nettoyage préalable
                     sh '''
                     docker-compose -f docker-compose.sonar.yml down --remove-orphans || true
                     docker rm -f sonarqube || true
-                    '''
-
-                    // Démarrer SonarQube avec plus de ressources
-                    sh '''
                     docker-compose -f docker-compose.sonar.yml up -d
                     docker update --memory 2G --memory-swap 3G sonarqube
                     '''
 
-                    // Attente que SonarQube soit vraiment prêt
                     timeout(time: 300, unit: 'SECONDS') {
-                        script {
-                            waitUntil {
-                                def ready = sh(
-                                    script: '''
-                                        SONAR_HOST_URL="http://192.168.136.165:9000"
-                                        STATUS=$(curl -s $SONAR_HOST_URL/api/system/status || echo "{}")
-                                        HEALTH=$(curl -s $SONAR_HOST_URL/api/system/health || echo "{}")
-                                        echo "Status: $STATUS"
-                                        echo "Health: $HEALTH"
-                                        echo "$STATUS" | grep -q '"status":"UP"' || \
-                                        echo "$HEALTH" | grep -q '"status":"GREEN"'
-                                    ''',
-                                    returnStatus: true
-                                )
-                                sleep 10
-                                return (ready == 0)
-                            }
+                        waitUntil {
+                            def ready = sh(
+                                script: '''
+                                    SONAR_HOST_URL="${SONAR_HOST_URL}"
+                                    STATUS=$(curl -s $SONAR_HOST_URL/api/system/status || echo "{}")
+                                    HEALTH=$(curl -s $SONAR_HOST_URL/api/system/health || echo "{}")
+                                    echo "$STATUS" | grep -q '"status":"UP"' || echo "$HEALTH" | grep -q '"status":"GREEN"'
+                                ''',
+                                returnStatus: true
+                            )
+                            sleep 10
+                            return (ready == 0)
                         }
                     }
 
-                    // Exécuter l’analyse SonarQube avec authentification par token
-                    withSonarQubeEnv('sonarqube') {
-                        withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
-                            dir("${WORKSPACE}/${PROJECT_DIR}") {
-                                sh '''
-                                sonar-scanner \
-                                    -Dsonar.projectKey=fastapi_app \
-                                    -Dsonar.projectName="FastAPI Application" \
-                                    -Dsonar.sources=app \
-                                    -Dsonar.python.version=3.10 \
-                                    -Dsonar.junit.reportPaths=test-reports/report.xml \
-                                '''
-                            }
+                    withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
+                        dir("${WORKSPACE}/${PROJECT_DIR}") {
+                            sh """
+                            sonar-scanner \
+                                -Dsonar.projectKey=fastapi_app \
+                                -Dsonar.projectName="FastAPI Application" \
+                                -Dsonar.sources=app \
+                                -Dsonar.python.version=3.11 \
+                                -Dsonar.junit.reportPaths=test-reports/report.xml \
+                                -Dsonar.host.url=${SONAR_HOST_URL} \
+                                -Dsonar.login=${SONAR_TOKEN}
+                            """
                         }
                     }
-                }  
+                }
             }
         }
 
@@ -124,12 +112,10 @@ pipeline {
                     if (fileExists('test-reports/report.xml')) {
                         junit 'test-reports/report.xml'
                     }
-                    // Nettoyage des conteneurs applicatifs
                     sh 'docker-compose down'
                 }
             }
 
-            // 🔥 Nettoyage de SonarQube même si erreur
             script {
                 sh '''
                 if [ "$(docker ps -aq -f name=^/sonarqube$)" ]; then
@@ -139,7 +125,6 @@ pipeline {
                 '''
             }
 
-            // Notification email
             script {
                 emailext (
                     subject: "Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
