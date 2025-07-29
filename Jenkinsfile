@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         PROJECT_DIR = 'FastAPI'
-        SONAR_HOST_URL = 'http://sonarqube:9000'
+        SONAR_HOST_URL = 'http://192.168.136.165:9000'
     }
 
     stages {
