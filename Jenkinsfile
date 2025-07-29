@@ -60,7 +60,7 @@ pipeline {
                         }
                     }
 
-                    withCredentials([string(credentialsId: 'jenkins-sonar', variable: 'SONAR_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
                         dir("${WORKSPACE}/${PROJECT_DIR}") {
                             sh """
                             sonar-scanner \
