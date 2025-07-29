@@ -80,9 +80,8 @@ pipeline {
                                     -Dsonar.projectKey=fastapi_app \
                                     -Dsonar.projectName="FastAPI Application" \
                                     -Dsonar.sources=app \
-                                    -Dsonar.python.version=3.11 \
+                                    -Dsonar.python.version=3.10 \
                                     -Dsonar.junit.reportPaths=test-reports/report.xml \
-                                    -Dsonar.login=$SONAR_TOKEN
                                 '''
                             }
                         }
