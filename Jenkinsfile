@@ -44,9 +44,9 @@ pipeline {
                     docker update --memory 2G --memory-swap 3G sonarqube
                     '''
 
-                    timeout(time: 300, unit: 'SECONDS') {
-                        waitUntil {
-                            script {
+                    script {
+                        timeout(time: 300, unit: 'SECONDS') {
+                            waitUntil {
                                 def ready = sh(
                                     script: '''
                                         SONAR_HOST_URL="${SONAR_HOST_URL}"
