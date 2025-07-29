@@ -9,6 +9,7 @@ pipeline {
         stage('Cloner le dépôt') {
             steps {
                 git branch: 'main', url: 'https://github.com/maramhassen/FastAPI.git'
+                sh 'ls -la'
             }
         }
 
@@ -72,9 +73,9 @@ pipeline {
                                 -Dsonar.projectKey=fastapi_app \
                                 -Dsonar.projectName="FastAPI Application" \
                                 -Dsonar.sources=app \
-                                -Dsonar.python.version=3.10 \
+                                -Dsonar.python.version=3.11 \
                                 -Dsonar.junit.reportPaths=test-reports/report.xml \
-                                -Dsonar.host.url=${SONAR_HOST_URL} \
+                                -Dsonar.host.url=//192.168.136.165:9000 \
                                 -Dsonar.login=${SONAR_TOKEN}
                             """
                         }
