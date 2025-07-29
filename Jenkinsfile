@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        //PROJECT_DIR = 'FastAPI'
         SONAR_HOST_URL = 'http://192.168.136.165:9000'
     }
 
@@ -64,15 +63,19 @@ pipeline {
 
                     withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
                         dir("${WORKSPACE}") {
+                            // Diagnostic pour vérifier que le dossier app existe
+                            sh 'echo "Contenu du répertoire courant :"; ls -la'
+                            sh 'echo "Contenu du dossier app/ :"; ls -la app || echo "Dossier app introuvable !"'
+
                             sh """
                             sonar-scanner \
                                 -Dsonar.projectKey=fastapi_app \
                                 -Dsonar.projectName="FastAPI Application" \
-                                -Dsonar.sources=\${WORKSPACE}/app \
-                                -Dsonar.python.version=3.11 \
+                                -Dsonar.sources=app \
+                                -Dsonar.python.version=3.10 \
                                 -Dsonar.junit.reportPaths=test-reports/report.xml \
                                 -Dsonar.host.url=${SONAR_HOST_URL} \
-                                -Dsonar.login=${SONAR_TOKEN} 
+                                -Dsonar.login=${SONAR_TOKEN}
                             """
                         }
                     }
