@@ -68,7 +68,7 @@ pipeline {
                             sonar-scanner \
                                 -Dsonar.projectKey=fastapi_app \
                                 -Dsonar.projectName="FastAPI Application" \
-                                -Dsonar.sources=${WORKSPACE}/app \
+                                -Dsonar.sources=\${WORKSPACE}/app \
                                 -Dsonar.python.version=3.11 \
                                 -Dsonar.junit.reportPaths=test-reports/report.xml \
                                 -Dsonar.host.url=${SONAR_HOST_URL} \
