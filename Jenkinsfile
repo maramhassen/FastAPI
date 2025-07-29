@@ -46,17 +46,19 @@ pipeline {
 
                     timeout(time: 300, unit: 'SECONDS') {
                         waitUntil {
-                            def ready = sh(
-                                script: '''
-                                    SONAR_HOST_URL="${SONAR_HOST_URL}"
-                                    STATUS=$(curl -s $SONAR_HOST_URL/api/system/status || echo "{}")
-                                    HEALTH=$(curl -s $SONAR_HOST_URL/api/system/health || echo "{}")
-                                    echo "$STATUS" | grep -q '"status":"UP"' || echo "$HEALTH" | grep -q '"status":"GREEN"'
-                                ''',
-                                returnStatus: true
-                            )
-                            sleep 10
-                            return (ready == 0)
+                            script {
+                                def ready = sh(
+                                    script: '''
+                                        SONAR_HOST_URL="${SONAR_HOST_URL}"
+                                        STATUS=$(curl -s $SONAR_HOST_URL/api/system/status || echo "{}")
+                                        HEALTH=$(curl -s $SONAR_HOST_URL/api/system/health || echo "{}")
+                                        echo "$STATUS" | grep -q '"status":"UP"' || echo "$HEALTH" | grep -q '"status":"GREEN"'
+                                    ''',
+                                    returnStatus: true
+                                )
+                                sleep 10
+                                return (ready == 0)
+                            }
                         }
                     }
 
