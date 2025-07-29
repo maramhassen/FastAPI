@@ -27,4 +27,4 @@ volumes:
 
 networks:
   fastapi_network:
-    external: true  # Utilise le réseau existant de votre application
+    driver: bridge
