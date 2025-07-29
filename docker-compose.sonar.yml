@@ -11,7 +11,7 @@ services:
       - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
       - SONAR_WEB_JAVAOPTS=-Xmx1g -Xms512m  
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/health"]
+      test: ["CMD", "curl", "-f", "http://192.168.136.165:9000/api/system/health"]
       interval: 10s
       timeout: 5s
       retries: 10
