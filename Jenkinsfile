@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        PROJECT_DIR = 'FastAPI'
+        //PROJECT_DIR = 'FastAPI'
         SONAR_HOST_URL = 'http://192.168.136.165:9000'
     }
 
@@ -15,7 +15,7 @@ pipeline {
 
         stage('Construire et démarrer les services') {
             steps {
-                dir("${WORKSPACE}/${PROJECT_DIR}") {
+                dir("${WORKSPACE}") {
                     sh 'docker-compose version'
                     sh 'docker-compose build'
                     sh 'docker-compose down --remove-orphans'
@@ -26,7 +26,7 @@ pipeline {
 
         stage('Tests unitaires avec pytest') {
             steps {
-                dir("${WORKSPACE}/${PROJECT_DIR}") {
+                dir("${WORKSPACE}") {
                     sh 'mkdir -p test-reports'
                     sh 'docker exec stage pytest --junitxml=/tmp/report.xml || exit 1'
                     sh 'docker cp stage:/tmp/report.xml test-reports/report.xml'
@@ -63,7 +63,7 @@ pipeline {
                     }
 
                     withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
-                        dir("${WORKSPACE}/${PROJECT_DIR}") {
+                        dir("${WORKSPACE}") {
                             sh """
                             sonar-scanner \
                                 -Dsonar.projectKey=fastapi_app \
@@ -82,7 +82,7 @@ pipeline {
 
         stage('Upload artefact vers Nexus') {
             steps {
-                dir("${WORKSPACE}/${PROJECT_DIR}") {
+                dir("${WORKSPACE}") {
                     sh 'python setup.py sdist'
                     sh 'curl -u admin:admin123 --upload-file dist/*.tar.gz http://localhost:8081/repository/raw-hosted/'
                 }
@@ -91,7 +91,7 @@ pipeline {
 
         stage('Vérifier si l\'API répond') {
             steps {
-                dir("${WORKSPACE}/${PROJECT_DIR}") {
+                dir("${WORKSPACE}") {
                     sh '''
                     for i in {1..10}; do
                       if curl -f http://localhost:8000; then
@@ -109,7 +109,7 @@ pipeline {
 
     post {
         always {
-            dir("${WORKSPACE}/${PROJECT_DIR}") {
+            dir("${WORKSPACE}") {
                 script {
                     if (fileExists('test-reports/report.xml')) {
                         junit 'test-reports/report.xml'
