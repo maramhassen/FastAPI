@@ -75,7 +75,7 @@ pipeline {
                                 -Dsonar.sources=app \
                                 -Dsonar.python.version=3.11 \
                                 -Dsonar.junit.reportPaths=test-reports/report.xml \
-                                -Dsonar.host.url=192.168.136.165:9000 \
+                                -Dsonar.host.url=http://192.168.136.165:9000 \
                                 -Dsonar.login=${SONAR_TOKEN}
                             """
                         }
