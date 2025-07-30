@@ -6,25 +6,26 @@ pipeline {
     }
 
     stages {
-        stage('Cloner le dépôt') {
+        stage('Checkout SCM') {
             steps {
-                git branch: 'main', url: 'https://github.com/maramhassen/FastAPI.git'
+                echo '📦 Clonage du dépôt à partir de la configuration du job Jenkins...'
+                checkout scm
                 sh 'ls -la'
             }
         }
 
-        stage('Construire et démarrer les services') {
+        stage('Build & Start Services') {
             steps {
                 dir("${WORKSPACE}") {
                     sh 'docker-compose version'
+                    sh 'docker-compose down --remove-orphans || true'
                     sh 'docker-compose build'
-                    sh 'docker-compose down --remove-orphans'
                     sh 'docker-compose up -d'
                 }
             }
         }
 
-        stage('Tests unitaires avec pytest') {
+        stage('Unit Tests with Pytest') {
             steps {
                 dir("${WORKSPACE}") {
                     sh 'mkdir -p test-reports'
@@ -34,24 +35,23 @@ pipeline {
             }
         }
 
-        stage('Analyse SonarQube') {
+        stage('SonarQube Analysis') {
             steps {
                 dir("${WORKSPACE}") {
                     sh '''
-                    docker-compose -f docker-compose.sonar.yml down --remove-orphans || true
-                    docker rm -f sonarqube || true
-                    docker-compose -f docker-compose.sonar.yml up -d
-                    docker update --memory 2G --memory-swap 3G sonarqube
+                        docker-compose -f docker-compose.sonar.yml down --remove-orphans || true
+                        docker rm -f sonarqube || true
+                        docker-compose -f docker-compose.sonar.yml up -d
+                        docker update --memory 2G --memory-swap 3G sonarqube
                     '''
 
                     script {
-                        timeout(time: 300, unit: 'SECONDS') {
+                        timeout(time: 5, unit: 'MINUTES') {
                             waitUntil {
                                 def ready = sh(
                                     script: '''
-                                        SONAR_HOST_URL="${SONAR_HOST_URL}"
-                                        STATUS=$(curl -s $SONAR_HOST_URL/api/system/status || echo "{}")
-                                        HEALTH=$(curl -s $SONAR_HOST_URL/api/system/health || echo "{}")
+                                        STATUS=$(curl -s ${SONAR_HOST_URL}/api/system/status || echo "{}")
+                                        HEALTH=$(curl -s ${SONAR_HOST_URL}/api/system/health || echo "{}")
                                         echo "$STATUS" | grep -q '"status":"UP"' || echo "$HEALTH" | grep -q '"status":"GREEN"'
                                     ''',
                                     returnStatus: true
@@ -63,28 +63,27 @@ pipeline {
                     }
 
                     withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
-                        dir("${WORKSPACE}") {
-                            // Diagnostic pour vérifier que le dossier app existe
-                            sh 'echo "Contenu du répertoire courant :"; ls -la'
-                            sh 'echo "Contenu du dossier app/ :"; ls -la app || echo "Dossier app introuvable !"'
+                        sh '''
+                            echo "📂 Répertoire courant :"
+                            ls -la
+                            echo "📂 Dossier app :"
+                            ls -la app || echo "Dossier app introuvable !"
 
-                            sh """
                             sonar-scanner \
                                 -Dsonar.projectKey=fastapi_app \
                                 -Dsonar.projectName="FastAPI Application" \
                                 -Dsonar.sources=app \
                                 -Dsonar.python.version=3.11 \
                                 -Dsonar.junit.reportPaths=test-reports/report.xml \
-                                -Dsonar.host.url=http://192.168.136.165:9000 \
+                                -Dsonar.host.url=${SONAR_HOST_URL} \
                                 -Dsonar.login=${SONAR_TOKEN}
-                            """
-                        }
+                        '''
                     }
                 }
             }
         }
 
-        stage('Upload artefact vers Nexus') {
+        stage('Upload to Nexus') {
             steps {
                 dir("${WORKSPACE}") {
                     sh 'python setup.py sdist'
@@ -93,18 +92,18 @@ pipeline {
             }
         }
 
-        stage('Vérifier si l\'API répond') {
+        stage('Check FastAPI Availability') {
             steps {
                 dir("${WORKSPACE}") {
                     sh '''
-                    for i in {1..10}; do
-                      if curl -f http://localhost:8000; then
-                        echo "API opérationnelle !"
-                        break
-                      fi
-                      echo "En attente de l\'API..."
-                      sleep 3
-                    done
+                        for i in {1..10}; do
+                          if curl -f http://localhost:8000; then
+                            echo "🚀 API opérationnelle !"
+                            break
+                          fi
+                          echo "⏳ En attente de l'API..."
+                          sleep 3
+                        done
                     '''
                 }
             }
@@ -118,16 +117,16 @@ pipeline {
                     if (fileExists('test-reports/report.xml')) {
                         junit 'test-reports/report.xml'
                     }
-                    sh 'docker-compose down'
+                    sh 'docker-compose down || true'
                 }
             }
 
             script {
                 sh '''
-                if [ "$(docker ps -aq -f name=^/sonarqube$)" ]; then
-                    echo "🧹 Nettoyage du conteneur SonarQube..."
-                    docker rm -f sonarqube || true
-                fi
+                    if [ "$(docker ps -aq -f name=^/sonarqube$)" ]; then
+                        echo "🧹 Nettoyage de SonarQube..."
+                        docker rm -f sonarqube || true
+                    fi
                 '''
             }
 
@@ -138,9 +137,9 @@ pipeline {
 Bonjour,
 
 Le pipeline '${env.JOB_NAME}' s'est terminé avec le statut : ${currentBuild.currentResult}
-Lien vers les logs : ${env.BUILD_URL}
+🔗 Voir les logs : ${env.BUILD_URL}
 
-Cordialement,
+Cordialement,  
 Jenkins CI/CD
 """,
                     to: 'maramhassen22@gmail.com'
